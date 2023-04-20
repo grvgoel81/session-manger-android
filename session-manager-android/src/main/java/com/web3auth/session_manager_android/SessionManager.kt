@@ -21,15 +21,18 @@ import org.json.JSONObject
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util.*
+import kotlin.math.min
 
-class SessionManager(context: Context, sessionID: String) {
+class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
 
     private val gson = GsonBuilder().disableHtmlEscaping().create()
     private var shareMetadata = ShareMetadata()
     private val web3AuthApi = ApiHelper.getInstance().create(Web3AuthApi::class.java)
     private var sessionId = sessionID
+    private var minSessionTime: Long = 86400
 
-    private var createSessionResponseCompletableFuture: CompletableFuture<String> = CompletableFuture()
+    private var createSessionResponseCompletableFuture: CompletableFuture<String> =
+        CompletableFuture()
     private var sessionCompletableFuture: CompletableFuture<String> = CompletableFuture()
     private var invalidateSessionCompletableFuture: CompletableFuture<Boolean> = CompletableFuture()
 
@@ -42,6 +45,7 @@ class SessionManager(context: Context, sessionID: String) {
             sessionID
         )
 
+        this.minSessionTime = min(sessionTime, 7 * 86400)
         sessionId = KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
     }
 
@@ -76,7 +80,7 @@ class SessionManager(context: Context, sessionID: String) {
                             BigInteger(newSessionKey, 16),
                             gsonData
                         ),
-                        timeout = 86400
+                        timeout = minSessionTime
                     )
                 )
                 if (result.isSuccessful) {
@@ -91,6 +95,11 @@ class SessionManager(context: Context, sessionID: String) {
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
+            createSessionResponseCompletableFuture.completeExceptionally(
+                Exception(
+                    SessionManagerError.getError(ErrorCode.SOMETHING_WENT_WRONG)
+                )
+            )
         }
         return createSessionResponseCompletableFuture
     }
@@ -102,7 +111,13 @@ class SessionManager(context: Context, sessionID: String) {
     fun authorizeSession(fromOpenLogin: Boolean): CompletableFuture<String> {
         sessionCompletableFuture = CompletableFuture()
         if(sessionId.isEmpty()) {
-            sessionCompletableFuture.completeExceptionally(Exception("SessionId not found"))
+            sessionCompletableFuture.completeExceptionally(
+                Exception(
+                    SessionManagerError.getError(
+                        ErrorCode.SESSIONID_NOT_FOUND
+                    )
+                )
+            )
         }
         if (sessionId.isNotEmpty()) {
             val pubKey = "04".plus(KeyStoreManager.getPubKey(sessionId))
@@ -148,10 +163,23 @@ class SessionManager(context: Context, sessionID: String) {
                             sessionCompletableFuture.complete(share)
                         }
                     } else {
-                        sessionCompletableFuture.completeExceptionally(Exception("Session Expired or Invalid public key"))
+                        sessionCompletableFuture.completeExceptionally(
+                            Exception(
+                                SessionManagerError.getError(
+                                    ErrorCode.SESSION_EXPIRED
+                                )
+                            )
+                        )
                     }
                 } catch (ex: Exception) {
                     ex.printStackTrace()
+                    sessionCompletableFuture.completeExceptionally(
+                        Exception(
+                            SessionManagerError.getError(
+                                ErrorCode.SOMETHING_WENT_WRONG
+                            )
+                        )
+                    )
                 }
             }
         }
@@ -201,6 +229,13 @@ class SessionManager(context: Context, sessionID: String) {
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
+            invalidateSessionCompletableFuture.completeExceptionally(
+                Exception(
+                    SessionManagerError.getError(
+                        ErrorCode.SOMETHING_WENT_WRONG
+                    )
+                )
+            )
         }
         return invalidateSessionCompletableFuture
     }

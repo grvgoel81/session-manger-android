@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnSession: Button
     private lateinit var btnAuthorize: Button
     private var web3AuthResponse = Web3AuthResponse()
+    private var sessionTime: Long = 86400
 
     private val gson = Gson()
 
@@ -66,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnAuthorize.setOnClickListener {
-            sessionManager = SessionManager(this.applicationContext, sessionId)
+            sessionManager = SessionManager(this.applicationContext, sessionId, sessionTime)
             val sessionResponse: CompletableFuture<String> = sessionManager.authorizeSession(false)
             sessionResponse.whenComplete { response, error ->
                 if (error == null) {
@@ -79,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnSession.setOnClickListener {
-            sessionManager = SessionManager(this.applicationContext, "")
+            sessionManager = SessionManager(this.applicationContext, "", sessionTime)
             // Sample data for create session
             val json = JSONObject()
             json.put("name", "Gaurav Goel")
@@ -119,7 +120,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun useSessionManageSdk(sessionId: String) {
-        sessionManager = SessionManager(this.applicationContext, sessionId)
+        sessionManager = SessionManager(this.applicationContext, sessionId, sessionTime)
         val sessionResponse: CompletableFuture<String> = sessionManager.authorizeSession(true)
         sessionResponse.whenComplete { loginResponse, error ->
             if (error == null) {
@@ -139,7 +140,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        sessionManager = SessionManager(this.applicationContext, sessionId)
+        sessionManager = SessionManager(this.applicationContext, sessionId, sessionTime)
         sessionManager.invalidateSession()
         val sessionResponse: CompletableFuture<Boolean> = sessionManager.invalidateSession()
         sessionResponse.whenComplete { response, error ->
