@@ -40,10 +40,12 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
         KeyStoreManager.initializePreferences(context)
         initiateKeyStoreManager()
 
-        KeyStoreManager.savePreferenceData(
-            KeyStoreManager.SESSION_ID,
-            sessionID
-        )
+        if (sessionID.isNotEmpty()) {
+            KeyStoreManager.savePreferenceData(
+                KeyStoreManager.SESSION_ID,
+                sessionID
+            )
+        }
 
         this.minSessionTime = min(sessionTime, 7 * 86400)
         sessionId = KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
