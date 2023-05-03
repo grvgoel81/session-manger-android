@@ -91,15 +91,21 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
                         )
                         createSessionResponseCompletableFuture.complete(newSessionKey)
                     }
+                } else {
+                    Handler(Looper.getMainLooper()).postDelayed(10) {
+                        invalidateSessionCompletableFuture.completeExceptionally(
+                            Exception(
+                                SessionManagerError.getError(
+                                    ErrorCode.SOMETHING_WENT_WRONG
+                                )
+                            )
+                        )
+                    }
                 }
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
-            createSessionResponseCompletableFuture.completeExceptionally(
-                Exception(
-                    SessionManagerError.getError(ErrorCode.SOMETHING_WENT_WRONG)
-                )
-            )
+            createSessionResponseCompletableFuture.completeExceptionally(ex)
         }
         return createSessionResponseCompletableFuture
     }
@@ -176,7 +182,7 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
                     sessionCompletableFuture.completeExceptionally(
                         Exception(
                             SessionManagerError.getError(
-                                ErrorCode.SOMETHING_WENT_WRONG
+                                ErrorCode.NOUSERFOUND
                             )
                         )
                     )
@@ -225,17 +231,21 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
                     Handler(Looper.getMainLooper()).postDelayed(10) {
                         invalidateSessionCompletableFuture.complete(true)
                     }
+                } else {
+                    Handler(Looper.getMainLooper()).postDelayed(10) {
+                        invalidateSessionCompletableFuture.completeExceptionally(
+                            Exception(
+                                SessionManagerError.getError(
+                                    ErrorCode.SOMETHING_WENT_WRONG
+                                )
+                            )
+                        )
+                    }
                 }
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
-            invalidateSessionCompletableFuture.completeExceptionally(
-                Exception(
-                    SessionManagerError.getError(
-                        ErrorCode.SOMETHING_WENT_WRONG
-                    )
-                )
-            )
+            invalidateSessionCompletableFuture.completeExceptionally(ex)
         }
         return invalidateSessionCompletableFuture
     }

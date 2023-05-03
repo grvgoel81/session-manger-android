@@ -186,10 +186,6 @@ object KeyStoreManager {
         Security.insertProviderAt(BouncyCastleProvider(), 1)
     }
 
-    fun hexToString(hex: String): String {
-        return String(BigInteger(hex, 16).toByteArray())
-    }
-
     fun randomString(len: Int): String {
         val charSet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
         charSet.length

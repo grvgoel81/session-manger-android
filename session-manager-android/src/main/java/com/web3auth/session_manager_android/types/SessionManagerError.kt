@@ -4,6 +4,9 @@ object SessionManagerError {
 
     fun getError(errorCode: ErrorCode): String {
         return when (errorCode) {
+            ErrorCode.NOUSERFOUND -> {
+                "No user found, please login again!"
+            }
             ErrorCode.SESSIONID_NOT_FOUND -> {
                 "SessionID not found!"
             }
@@ -27,6 +30,7 @@ object SessionManagerError {
 }
 
 enum class ErrorCode {
+    NOUSERFOUND,
     SESSIONID_NOT_FOUND,
     ENCODING_ERROR,
     DECODING_ERROR,
