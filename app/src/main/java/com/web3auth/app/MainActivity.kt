@@ -143,7 +143,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun logout() {
         sessionManager = SessionManager(this.applicationContext)
-        sessionManager.invalidateSession()
         val sessionResponse: CompletableFuture<Boolean> = sessionManager.invalidateSession()
         sessionResponse.whenComplete { response, error ->
             if (error == null) {

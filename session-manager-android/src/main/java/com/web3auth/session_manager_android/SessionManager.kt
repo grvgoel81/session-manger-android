@@ -27,6 +27,7 @@ class SessionManager(context: Context) {
 
     private val gson = GsonBuilder().disableHtmlEscaping().create()
     private val web3AuthApi = ApiHelper.getInstance().create(Web3AuthApi::class.java)
+    private val mContext = context
 
     private var createSessionResponseCompletableFuture: CompletableFuture<String> =
         CompletableFuture()
@@ -55,55 +56,63 @@ class SessionManager(context: Context) {
     @OptIn(DelicateCoroutinesApi::class)
     fun createSession(data: String, sessionTime: Long): CompletableFuture<String> {
         val newSessionKey = KeyStoreManager.generateRandomSessionKey()
-        try {
-            val ephemKey = "04" + KeyStoreManager.getPubKey(newSessionKey)
-            val ivKey = KeyStoreManager.randomString(32)
-            val aes256cbc = AES256CBC(
-                newSessionKey,
-                ephemKey,
-                ivKey
-            )
-
-            val encryptedData = aes256cbc.encrypt(data.toByteArray(StandardCharsets.UTF_8))
-            val mac = aes256cbc.macKey
-            val encryptedMetadata = ShareMetadata(ivKey, ephemKey, encryptedData, mac)
-            val gsonData = gson.toJson(encryptedMetadata)
-
-            GlobalScope.launch {
-                val result = web3AuthApi.createSession(
-                    SessionRequestBody(
-                        key = "04".plus(KeyStoreManager.getPubKey(sessionId = newSessionKey)),
-                        data = gsonData,
-                        signature = KeyStoreManager.getECDSASignature(
-                            BigInteger(newSessionKey, 16),
-                            gsonData
-                        ),
-                        timeout = min(sessionTime, 7 * 86400)
-                    )
+        if (ApiHelper.isNetworkAvailable(mContext)) {
+            try {
+                val ephemKey = "04" + KeyStoreManager.getPubKey(newSessionKey)
+                val ivKey = KeyStoreManager.randomString(32)
+                val aes256cbc = AES256CBC(
+                    newSessionKey,
+                    ephemKey,
+                    ivKey
                 )
-                if (result.isSuccessful) {
-                    Handler(Looper.getMainLooper()).postDelayed(10) {
-                        KeyStoreManager.savePreferenceData(
-                            KeyStoreManager.SESSION_ID,
-                            newSessionKey
+
+                val encryptedData = aes256cbc.encrypt(data.toByteArray(StandardCharsets.UTF_8))
+                val mac = aes256cbc.macKey
+                val encryptedMetadata = ShareMetadata(ivKey, ephemKey, encryptedData, mac)
+                val gsonData = gson.toJson(encryptedMetadata)
+
+                GlobalScope.launch {
+                    val result = web3AuthApi.createSession(
+                        SessionRequestBody(
+                            key = "04".plus(KeyStoreManager.getPubKey(sessionId = newSessionKey)),
+                            data = gsonData,
+                            signature = KeyStoreManager.getECDSASignature(
+                                BigInteger(newSessionKey, 16),
+                                gsonData
+                            ),
+                            timeout = min(sessionTime, 7 * 86400)
                         )
-                        createSessionResponseCompletableFuture.complete(newSessionKey)
-                    }
-                } else {
-                    Handler(Looper.getMainLooper()).postDelayed(10) {
-                        invalidateSessionCompletableFuture.completeExceptionally(
-                            Exception(
-                                SessionManagerError.getError(
-                                    ErrorCode.SOMETHING_WENT_WRONG
+                    )
+                    if (result.isSuccessful) {
+                        Handler(Looper.getMainLooper()).postDelayed(10) {
+                            KeyStoreManager.savePreferenceData(
+                                KeyStoreManager.SESSION_ID,
+                                newSessionKey
+                            )
+                            createSessionResponseCompletableFuture.complete(newSessionKey)
+                        }
+                    } else {
+                        Handler(Looper.getMainLooper()).postDelayed(10) {
+                            invalidateSessionCompletableFuture.completeExceptionally(
+                                Exception(
+                                    SessionManagerError.getError(
+                                        ErrorCode.SOMETHING_WENT_WRONG
+                                    )
                                 )
                             )
-                        )
+                        }
                     }
                 }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+                createSessionResponseCompletableFuture.completeExceptionally(ex)
             }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            createSessionResponseCompletableFuture.completeExceptionally(ex)
+        } else {
+            createSessionResponseCompletableFuture.completeExceptionally(
+                Exception(
+                    SessionManagerError.getError(ErrorCode.RUNTIME_ERROR)
+                )
+            )
         }
         return createSessionResponseCompletableFuture
     }
@@ -115,7 +124,7 @@ class SessionManager(context: Context) {
     fun authorizeSession(fromOpenLogin: Boolean): CompletableFuture<String> {
         sessionCompletableFuture = CompletableFuture()
         val sessionId = KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
-        if(sessionId.isEmpty()) {
+        if (sessionId.isEmpty()) {
             sessionCompletableFuture.completeExceptionally(
                 Exception(
                     SessionManagerError.getError(
@@ -124,7 +133,7 @@ class SessionManager(context: Context) {
                 )
             )
         }
-        if (sessionId.isNotEmpty()) {
+        if (sessionId.isNotEmpty() && ApiHelper.isNetworkAvailable(mContext)) {
             val pubKey = "04".plus(KeyStoreManager.getPubKey(sessionId))
             GlobalScope.launch {
                 try {
@@ -186,6 +195,14 @@ class SessionManager(context: Context) {
                     )
                 }
             }
+        } else {
+            sessionCompletableFuture.completeExceptionally(
+                Exception(
+                    SessionManagerError.getError(
+                        ErrorCode.RUNTIME_ERROR
+                    )
+                )
+            )
         }
         return sessionCompletableFuture
     }
@@ -193,59 +210,69 @@ class SessionManager(context: Context) {
     @OptIn(DelicateCoroutinesApi::class)
     fun invalidateSession(): CompletableFuture<Boolean> {
         invalidateSessionCompletableFuture = CompletableFuture()
-        try {
-            val ephemKey =
-                KeyStoreManager.getPreferencesData(KeyStoreManager.EPHEM_PUBLIC_Key)
-            val ivKey = KeyStoreManager.getPreferencesData(KeyStoreManager.IV_KEY)
-            val mac = KeyStoreManager.getPreferencesData(KeyStoreManager.MAC)
-            val sessionId =
-                KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
+        if (ApiHelper.isNetworkAvailable(mContext)) {
+            try {
+                val ephemKey =
+                    KeyStoreManager.getPreferencesData(KeyStoreManager.EPHEM_PUBLIC_Key)
+                val ivKey = KeyStoreManager.getPreferencesData(KeyStoreManager.IV_KEY)
+                val mac = KeyStoreManager.getPreferencesData(KeyStoreManager.MAC)
+                val sessionId =
+                    KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
 
-            if (ephemKey.isNullOrEmpty() || ivKey.isNullOrEmpty() || sessionId.isEmpty() || mac.isNullOrEmpty()) {
-                invalidateSessionCompletableFuture.complete(false)
-            }
+                if (ephemKey.isNullOrEmpty() || ivKey.isNullOrEmpty() || sessionId.isEmpty() || mac.isNullOrEmpty()) {
+                    invalidateSessionCompletableFuture.complete(false)
+                }
 
-            val aes256cbc = AES256CBC(
-                sessionId,
-                ephemKey,
-                ivKey.toString()
-            )
-            val encryptedData = aes256cbc.encrypt("".toByteArray(StandardCharsets.UTF_8))
-            val encryptedMetadata = ShareMetadata(ivKey, ephemKey, encryptedData, mac)
-            val gsonData = gson.toJson(encryptedMetadata)
-
-            GlobalScope.launch {
-                val result = web3AuthApi.invalidateSession(
-                    SessionRequestBody(
-                        key = "04".plus(KeyStoreManager.getPubKey(sessionId = sessionId)),
-                        data = gsonData,
-                        signature = KeyStoreManager.getECDSASignature(
-                            BigInteger(sessionId, 16),
-                            gsonData
-                        ),
-                        timeout = 1
-                    )
+                val aes256cbc = AES256CBC(
+                    sessionId,
+                    ephemKey,
+                    ivKey.toString()
                 )
-                if (result.isSuccessful) {
-                    KeyStoreManager.deletePreferencesData(KeyStoreManager.SESSION_ID)
-                    Handler(Looper.getMainLooper()).postDelayed(10) {
-                        invalidateSessionCompletableFuture.complete(true)
-                    }
-                } else {
-                    Handler(Looper.getMainLooper()).postDelayed(10) {
-                        invalidateSessionCompletableFuture.completeExceptionally(
-                            Exception(
-                                SessionManagerError.getError(
-                                    ErrorCode.SOMETHING_WENT_WRONG
+                val encryptedData = aes256cbc.encrypt("".toByteArray(StandardCharsets.UTF_8))
+                val encryptedMetadata = ShareMetadata(ivKey, ephemKey, encryptedData, mac)
+                val gsonData = gson.toJson(encryptedMetadata)
+
+                GlobalScope.launch {
+                    val result = web3AuthApi.invalidateSession(
+                        SessionRequestBody(
+                            key = "04".plus(KeyStoreManager.getPubKey(sessionId = sessionId)),
+                            data = gsonData,
+                            signature = KeyStoreManager.getECDSASignature(
+                                BigInteger(sessionId, 16),
+                                gsonData
+                            ),
+                            timeout = 1
+                        )
+                    )
+                    if (result.isSuccessful) {
+                        KeyStoreManager.deletePreferencesData(KeyStoreManager.SESSION_ID)
+                        Handler(Looper.getMainLooper()).postDelayed(10) {
+                            invalidateSessionCompletableFuture.complete(true)
+                        }
+                    } else {
+                        Handler(Looper.getMainLooper()).postDelayed(10) {
+                            invalidateSessionCompletableFuture.completeExceptionally(
+                                Exception(
+                                    SessionManagerError.getError(
+                                        ErrorCode.SOMETHING_WENT_WRONG
+                                    )
                                 )
                             )
-                        )
+                        }
                     }
                 }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+                invalidateSessionCompletableFuture.completeExceptionally(ex)
             }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            invalidateSessionCompletableFuture.completeExceptionally(ex)
+        } else {
+            invalidateSessionCompletableFuture.completeExceptionally(
+                Exception(
+                    SessionManagerError.getError(
+                        ErrorCode.RUNTIME_ERROR
+                    )
+                )
+            )
         }
         return invalidateSessionCompletableFuture
     }
