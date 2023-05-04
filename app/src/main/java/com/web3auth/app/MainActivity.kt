@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnAuthorize.setOnClickListener {
-            sessionManager = SessionManager(this.applicationContext, sessionId, sessionTime)
+            sessionManager = SessionManager(this.applicationContext)
             val sessionResponse: CompletableFuture<String> = sessionManager.authorizeSession(false)
             sessionResponse.whenComplete { response, error ->
                 if (error == null) {
@@ -80,13 +80,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnSession.setOnClickListener {
-            sessionManager = SessionManager(this.applicationContext, "", sessionTime)
+            sessionManager = SessionManager(this.applicationContext)
             // Sample data for create session
             val json = JSONObject()
             json.put("name", "Gaurav Goel")
             json.put("publicKey", "qwerty1234jhqwjg235n4n13jh35j3m4")
             json.put("email", "gaurav@tor.us")
-            val sessionResponse: CompletableFuture<String> = sessionManager.createSession(json.toString())
+            val sessionResponse: CompletableFuture<String> =
+                sessionManager.createSession(json.toString(), 86400)
             sessionResponse.whenComplete { response, error ->
                 if (error == null) {
                     sessionId = response
@@ -120,7 +121,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun useSessionManageSdk(sessionId: String) {
-        sessionManager = SessionManager(this.applicationContext, sessionId, sessionTime)
+        sessionManager = SessionManager(this.applicationContext)
+        sessionManager.saveSessionId(sessionId)
         val sessionResponse: CompletableFuture<String> = sessionManager.authorizeSession(true)
         sessionResponse.whenComplete { loginResponse, error ->
             if (error == null) {
@@ -140,7 +142,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        sessionManager = SessionManager(this.applicationContext, sessionId, sessionTime)
+        sessionManager = SessionManager(this.applicationContext)
         sessionManager.invalidateSession()
         val sessionResponse: CompletableFuture<Boolean> = sessionManager.invalidateSession()
         sessionResponse.whenComplete { response, error ->

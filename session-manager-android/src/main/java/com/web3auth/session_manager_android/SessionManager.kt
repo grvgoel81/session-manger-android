@@ -23,13 +23,10 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 import kotlin.math.min
 
-class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
+class SessionManager(context: Context) {
 
     private val gson = GsonBuilder().disableHtmlEscaping().create()
-    private var shareMetadata = ShareMetadata()
     private val web3AuthApi = ApiHelper.getInstance().create(Web3AuthApi::class.java)
-    private var sessionId = sessionID
-    private var minSessionTime: Long = 86400
 
     private var createSessionResponseCompletableFuture: CompletableFuture<String> =
         CompletableFuture()
@@ -39,25 +36,24 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
     init {
         KeyStoreManager.initializePreferences(context)
         initiateKeyStoreManager()
-
-        if (sessionID.isNotEmpty()) {
-            KeyStoreManager.savePreferenceData(
-                KeyStoreManager.SESSION_ID,
-                sessionID
-            )
-        }
-
-        this.minSessionTime = min(sessionTime, 7 * 86400)
-        sessionId = KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
     }
 
     private fun initiateKeyStoreManager() {
         KeyStoreManager.getKeyGenerator()
     }
 
+    fun saveSessionId(sessionId: String) {
+        if (sessionId.isNotEmpty()) {
+            KeyStoreManager.savePreferenceData(
+                KeyStoreManager.SESSION_ID,
+                sessionId
+            )
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(DelicateCoroutinesApi::class)
-    fun createSession(data: String): CompletableFuture<String> {
+    fun createSession(data: String, sessionTime: Long): CompletableFuture<String> {
         val newSessionKey = KeyStoreManager.generateRandomSessionKey()
         try {
             val ephemKey = "04" + KeyStoreManager.getPubKey(newSessionKey)
@@ -82,7 +78,7 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
                             BigInteger(newSessionKey, 16),
                             gsonData
                         ),
-                        timeout = minSessionTime
+                        timeout = min(sessionTime, 7 * 86400)
                     )
                 )
                 if (result.isSuccessful) {
@@ -118,6 +114,7 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
     @OptIn(DelicateCoroutinesApi::class)
     fun authorizeSession(fromOpenLogin: Boolean): CompletableFuture<String> {
         sessionCompletableFuture = CompletableFuture()
+        val sessionId = KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
         if(sessionId.isEmpty()) {
             sessionCompletableFuture.completeExceptionally(
                 Exception(
@@ -134,7 +131,7 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
                     val result = web3AuthApi.authorizeSession(pubKey)
                     if (result.isSuccessful && result.body() != null) {
                         val messageObj = result.body()?.message?.let { JSONObject(it).toString() }
-                        shareMetadata = gson.fromJson(
+                        val shareMetadata: ShareMetadata = gson.fromJson(
                             messageObj,
                             ShareMetadata::class.java
                         )
@@ -158,7 +155,6 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
                             shareMetadata.iv.toString()
                         )
 
-                        // Implementation specific oddity - hex string actually gets passed as a base64 string
                         val share: String = if(fromOpenLogin) {
                             val encryptedShareBytes =
                                 AES256CBC.toByteArray(shareMetadata.ciphertext?.let { BigInteger(it, 16) })
@@ -202,8 +198,10 @@ class SessionManager(context: Context, sessionID: String, sessionTime: Long) {
                 KeyStoreManager.getPreferencesData(KeyStoreManager.EPHEM_PUBLIC_Key)
             val ivKey = KeyStoreManager.getPreferencesData(KeyStoreManager.IV_KEY)
             val mac = KeyStoreManager.getPreferencesData(KeyStoreManager.MAC)
+            val sessionId =
+                KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
 
-            if (ephemKey?.isEmpty() == true && ivKey?.isEmpty() == true) {
+            if (ephemKey.isNullOrEmpty() || ivKey.isNullOrEmpty() || sessionId.isEmpty() || mac.isNullOrEmpty()) {
                 invalidateSessionCompletableFuture.complete(false)
             }
 
