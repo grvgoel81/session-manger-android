@@ -52,6 +52,10 @@ class SessionManager(context: Context) {
         }
     }
 
+    fun getSessionId(): String {
+        return KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(DelicateCoroutinesApi::class)
     fun createSession(data: String, sessionTime: Long): CompletableFuture<String> {
