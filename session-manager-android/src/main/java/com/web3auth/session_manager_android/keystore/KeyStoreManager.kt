@@ -4,7 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import androidx.security.crypto.MasterKey
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.DERSequence
@@ -34,16 +34,17 @@ object KeyStoreManager {
     const val MAC = "mac"
     const val SESSION_ID = "sessionId"
     private lateinit var encryptedPairData: Pair<ByteArray, ByteArray>
-
-    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
     private lateinit var sharedPreferences: EncryptedSharedPreferences
 
     fun initializePreferences(context: Context) {
         try {
+            val keyGenParameterSpec = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
             sharedPreferences = EncryptedSharedPreferences.create(
-                "Web3Auth",
-                masterKeyAlias,
                 context,
+                WEB3AUTH,
+                keyGenParameterSpec,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             ) as EncryptedSharedPreferences

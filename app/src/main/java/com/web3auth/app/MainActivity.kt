@@ -71,8 +71,9 @@ class MainActivity : AppCompatActivity() {
             val sessionResponse: CompletableFuture<String> = sessionManager.authorizeSession(false)
             sessionResponse.whenComplete { response, error ->
                 if (error == null) {
+                    Log.d("sessionResponse", response)
                     val tempJson = JSONObject(response)
-                    tvResponse.text = tempJson.toString(4)
+                    tvResponse.text = tempJson.get("privateKey").toString()
                 } else {
                     Log.d("MainActivity_Web3Auth", error.message ?: "Something went wrong")
                 }
@@ -83,9 +84,11 @@ class MainActivity : AppCompatActivity() {
             sessionManager = SessionManager(this.applicationContext)
             // Sample data for create session
             val json = JSONObject()
-            json.put("name", "Gaurav Goel")
-            json.put("publicKey", "qwerty1234jhqwjg235n4n13jh35j3m4")
-            json.put("email", "gaurav@tor.us")
+            json.put(
+                "privateKey",
+                "91714924788458331086143283967892938475657483928374623640418082526960471979197446884"
+            )
+            json.put("publicAddress", "0x93475c78dv0jt80f2b6715a5c53838eC4aC96EF7")
             val sessionResponse: CompletableFuture<String> =
                 sessionManager.createSession(json.toString(), 86400)
             sessionResponse.whenComplete { response, error ->
