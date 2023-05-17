@@ -35,7 +35,7 @@ class SessionManager(context: Context) {
     private var invalidateSessionCompletableFuture: CompletableFuture<Boolean> = CompletableFuture()
 
     init {
-        KeyStoreManager.initializePreferences(context)
+        KeyStoreManager.initializePreferences(context.applicationContext)
         initiateKeyStoreManager()
     }
 
