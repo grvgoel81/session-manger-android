@@ -34,6 +34,12 @@ class SessionManager(context: Context) {
     private var sessionCompletableFuture: CompletableFuture<String> = CompletableFuture()
     private var invalidateSessionCompletableFuture: CompletableFuture<Boolean> = CompletableFuture()
 
+    companion object {
+        fun generateRandomSessionKey(): String {
+            return KeyStoreManager.generateRandomSessionKey()
+        }
+    }
+
     init {
         KeyStoreManager.initializePreferences(context.applicationContext)
         initiateKeyStoreManager()
@@ -56,10 +62,11 @@ class SessionManager(context: Context) {
         return KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
     }
 
+
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(DelicateCoroutinesApi::class)
     fun createSession(data: String, sessionTime: Long): CompletableFuture<String> {
-        val newSessionKey = KeyStoreManager.generateRandomSessionKey()
+        val newSessionKey = generateRandomSessionKey()
         if (ApiHelper.isNetworkAvailable(mContext)) {
             try {
                 val ephemKey = "04" + KeyStoreManager.getPubKey(newSessionKey)
@@ -150,7 +157,7 @@ class SessionManager(context: Context) {
                         )
 
                         KeyStoreManager.savePreferenceData(
-                            KeyStoreManager.EPHEM_PUBLIC_Key,
+                            KeyStoreManager.EPHEM_PUBLIC_KEY,
                             shareMetadata.ephemPublicKey.toString()
                         )
                         KeyStoreManager.savePreferenceData(
@@ -217,7 +224,7 @@ class SessionManager(context: Context) {
         if (ApiHelper.isNetworkAvailable(mContext)) {
             try {
                 val ephemKey =
-                    KeyStoreManager.getPreferencesData(KeyStoreManager.EPHEM_PUBLIC_Key)
+                    KeyStoreManager.getPreferencesData(KeyStoreManager.EPHEM_PUBLIC_KEY)
                 val ivKey = KeyStoreManager.getPreferencesData(KeyStoreManager.IV_KEY)
                 val mac = KeyStoreManager.getPreferencesData(KeyStoreManager.MAC)
                 val sessionId =

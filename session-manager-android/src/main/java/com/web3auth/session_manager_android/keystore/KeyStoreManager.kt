@@ -30,11 +30,15 @@ object KeyStoreManager {
     private const val Android_KEY_STORE = "AndroidKeyStore"
     private const val WEB3AUTH = "Web3Auth"
     const val IV_KEY = "ivKey"
-    const val EPHEM_PUBLIC_Key = "ephemPublicKey"
+    const val EPHEM_PUBLIC_KEY = "ephemPublicKey"
     const val MAC = "mac"
     const val SESSION_ID = "sessionId"
     private lateinit var encryptedPairData: Pair<ByteArray, ByteArray>
     private lateinit var sharedPreferences: EncryptedSharedPreferences
+
+    init {
+        setupBouncyCastle()
+    }
 
     fun initializePreferences(context: Context) {
         try {
@@ -168,7 +172,6 @@ object KeyStoreManager {
      * Generate temporary private and public key that is used to secure receive shares
      */
     fun generateRandomSessionKey(): String {
-        setupBouncyCastle()
         val tmpKey = Keys.createEcKeyPair()
         return tmpKey.privateKey.toString(16).padStart(64, '0')
     }
@@ -176,7 +179,7 @@ object KeyStoreManager {
     /**
      * Initialize BouncyCastle for generation sessionId
      */
-    private fun setupBouncyCastle() {
+    fun setupBouncyCastle() {
         val provider = Security.getProvider(BouncyCastleProvider.PROVIDER_NAME)
             ?: // Web3j will set up the provider lazily when it's first used.
             return
