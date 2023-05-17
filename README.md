@@ -27,11 +27,20 @@ Add the relevant dependency to your project:
 
 ```groovy
 repositories {
-    maven { url "https://jitpack.io" }
+  maven { url "https://jitpack.io" }
 }
 dependencies {
-    implementation 'com.github.web3auth:session-manager-android:0.0.1'
+  implementation 'com.github.web3auth:session-manager-android:0.0.1'
 }
+```
+
+### Permissions
+
+Open your app's `AndroidManifest.xml` file and add the following permission:
+
+```xml
+
+<uses-permission android:name="android.permission.INTERNET" />
 ```
 
 ## Requirements
