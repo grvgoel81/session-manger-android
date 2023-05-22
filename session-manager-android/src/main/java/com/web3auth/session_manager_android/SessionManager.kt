@@ -156,19 +156,6 @@ class SessionManager(context: Context) {
                             ShareMetadata::class.java
                         )
 
-                        KeyStoreManager.savePreferenceData(
-                            KeyStoreManager.EPHEM_PUBLIC_KEY,
-                            shareMetadata.ephemPublicKey.toString()
-                        )
-                        KeyStoreManager.savePreferenceData(
-                            KeyStoreManager.IV_KEY,
-                            shareMetadata.iv.toString()
-                        )
-                        KeyStoreManager.savePreferenceData(
-                            KeyStoreManager.MAC,
-                            shareMetadata.mac.toString()
-                        )
-
                         val aes256cbc = AES256CBC(
                             sessionId,
                             shareMetadata.ephemPublicKey,
@@ -223,22 +210,23 @@ class SessionManager(context: Context) {
         invalidateSessionCompletableFuture = CompletableFuture()
         if (ApiHelper.isNetworkAvailable(mContext)) {
             try {
-                val ephemKey =
-                    KeyStoreManager.getPreferencesData(KeyStoreManager.EPHEM_PUBLIC_KEY)
-                val ivKey = KeyStoreManager.getPreferencesData(KeyStoreManager.IV_KEY)
-                val mac = KeyStoreManager.getPreferencesData(KeyStoreManager.MAC)
                 val sessionId =
                     KeyStoreManager.getPreferencesData(KeyStoreManager.SESSION_ID).toString()
+                val ephemKey = "04" + KeyStoreManager.getPubKey(sessionId)
+                val ivKey = KeyStoreManager.randomString(32)
+
+                val aes256cbc = AES256CBC(
+                    sessionId,
+                    ephemKey,
+                    ivKey
+                )
+
+                val mac = aes256cbc.macKey
 
                 if (ephemKey.isNullOrEmpty() || ivKey.isNullOrEmpty() || sessionId.isEmpty() || mac.isNullOrEmpty()) {
                     invalidateSessionCompletableFuture.complete(false)
                 }
 
-                val aes256cbc = AES256CBC(
-                    sessionId,
-                    ephemKey,
-                    ivKey.toString()
-                )
                 val encryptedData = aes256cbc.encrypt("".toByteArray(StandardCharsets.UTF_8))
                 val encryptedMetadata = ShareMetadata(ivKey, ephemKey, encryptedData, mac)
                 val gsonData = gson.toJson(encryptedMetadata)
