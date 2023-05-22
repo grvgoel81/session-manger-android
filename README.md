@@ -7,11 +7,6 @@
 Torus Session Manager Android is the SDK that gives you the ability to create, authorize and
 validate session with any data in String format.
 
-## 📖 Documentation
-
-Checkout the official [Web3Auth Documentation](https://web3auth.io/docs/sdk/web/core/) to get
-started.
-
 ## Features
 
 - Multi network support
