@@ -19,7 +19,7 @@ started.
 
 ## Getting Started
 
-Typically your application should depend on release versions of fetch-node-details, but you may also
+User can 
 use snapshot dependencies for early access to features and fixes, refer to the Snapshot Dependencies
 section. This project uses [jitpack](https://jitpack.io/docs/) for release management
 
@@ -30,7 +30,7 @@ repositories {
   maven { url "https://jitpack.io" }
 }
 dependencies {
-  implementation 'com.github.web3auth:session-manager-android:0.0.1'
+  implementation 'com.github.web3auth:session-manager-android:0.0.2'
 }
 ```
 
