@@ -13,7 +13,6 @@ import com.web3auth.session_manager_android.keystore.KeyStoreManager
 import com.web3auth.session_manager_android.models.SessionRequestBody
 import com.web3auth.session_manager_android.types.*
 import com.web3auth.session_manager_android.types.Base64.encodeBytes
-import java8.util.concurrent.CompletableFuture
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -21,6 +20,7 @@ import org.json.JSONObject
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import kotlin.math.min
 
 class SessionManager(context: Context) {
