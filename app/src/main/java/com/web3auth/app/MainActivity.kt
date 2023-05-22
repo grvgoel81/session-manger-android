@@ -14,8 +14,8 @@ import com.google.gson.Gson
 import com.web3auth.core.Web3Auth
 import com.web3auth.core.types.*
 import com.web3auth.session_manager_android.SessionManager
-import java8.util.concurrent.CompletableFuture
 import org.json.JSONObject
+import java.util.concurrent.CompletableFuture
 
 class MainActivity : AppCompatActivity() {
 
@@ -109,7 +109,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun onClickLogin() {
         val selectedLoginProvider = Provider.GOOGLE
-        val loginCompletableFuture: CompletableFuture<Web3AuthResponse> = web3Auth.login(LoginParams(selectedLoginProvider))
+        val loginCompletableFuture: java8.util.concurrent.CompletableFuture<Web3AuthResponse> =
+            web3Auth.login(LoginParams(selectedLoginProvider))
 
         loginCompletableFuture.whenComplete { loginResponse, error ->
             if (error == null) {
